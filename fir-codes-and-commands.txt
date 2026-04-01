@@ -1,0 +1,387 @@
+================================================================
+FIR HPC CLUSTER --- ALL COMMANDS AND CODE
+================================================================
+Copy from this file to avoid PDF copy-paste spacing issues.
+Replace placeholders before typing:
+  yourUsername        -> your Alliance username
+  yourWindowsUsername -> your Windows login name
+  def-kanj241_cpu     -> def-yourPI_cpu
+  def-kanj241_gpu     -> def-yourPI_gpu
+================================================================
+
+
+----------------------------------------------------------------
+BEFORE YOU BEGIN
+----------------------------------------------------------------
+
+# SSH into the cluster (run in Windows PowerShell or Command Prompt)
+ssh yourUsername@fir.alliancecan.ca
+
+# Create working directory
+cd ~/scratch
+mkdir hpc-tutorial
+cd hpc-tutorial
+pwd
+
+# Check the scratch symlink
+ls -la ~/ | grep scratch
+
+
+----------------------------------------------------------------
+SECTION 1 --- SUBMITTING JOBS WITH SLURM
+----------------------------------------------------------------
+
+# Navigate to working directory
+cd /scratch/yourUsername/hpc-tutorial
+
+nano example-job.sh
+
+# --- example-job.sh ---
+#!/bin/bash
+#SBATCH -J my_test_job
+#SBATCH --time=00:05:00
+#SBATCH --mem=256M
+#SBATCH --ntasks=1
+#SBATCH --account=def-kanj241_cpu
+
+echo -n "This script is running on "
+hostname
+echo "Job done!"
+# --- end example-job.sh ---
+
+# Run directly (wrong - runs on login node)
+sh example-job.sh
+
+# Submit through SLURM (correct)
+sbatch example-job.sh
+
+# Check output
+cat slurm-30498427.out
+
+# --- SLURM job script with SLURM_SUBMIT_DIR ---
+#!/bin/bash
+#SBATCH -J my_test_job
+#SBATCH --time=00:05:00
+#SBATCH --mem=1G
+#SBATCH --ntasks=1
+#SBATCH --account=def-kanj241_cpu
+
+echo -n "This script is running on "
+hostname
+echo "Submitted from: $SLURM_SUBMIT_DIR"
+echo "Job done!"
+# --- end script ---
+
+# Monitor jobs
+sbatch example-job.sh
+squeue -u yourUsername
+scancel 30498427
+scancel -u yourUsername
+
+# Create timeout test script
+nano timeout-test.sh
+
+# --- timeout-test.sh ---
+#!/bin/bash
+#SBATCH -J timeout_test
+#SBATCH --time=00:01:00
+#SBATCH --mem=256M
+#SBATCH --ntasks=1
+#SBATCH --account=def-kanj241_cpu
+
+echo -n "This script is running on "
+hostname
+sleep 120
+echo "This script finished successfully."
+# --- end timeout-test.sh ---
+
+sbatch timeout-test.sh
+cat slurm-30503950.out
+
+# Time limit examples for #SBATCH
+#SBATCH --time=00:30:00
+#SBATCH --time=02:00:00
+#SBATCH --time=1-00:00:00
+
+# srun examples
+srun hostname
+srun -n 2 echo "hello"
+
+# Check job efficiency
+seff 30508122
+sacct
+sacct -j 30508122
+
+
+----------------------------------------------------------------
+SECTION 2 --- LOADING SOFTWARE WITH MODULES
+----------------------------------------------------------------
+
+module avail
+module avail python
+module spider python
+module list
+
+module load python/3.11.5
+python --version
+
+module unload python
+module purge
+which python
+
+
+----------------------------------------------------------------
+SECTION 3 --- RUNNING PYTHON ON THE CLUSTER
+----------------------------------------------------------------
+
+# Step 1 - Create the virtual environment
+module load python/3.11.5
+python -m venv /scratch/yourUsername/my_env
+
+# Where to put your environment
+python -m venv /home/yourUsername/projects/def-yourPI/envs/my_env
+python -m venv /scratch/yourUsername/my_env
+
+# Step 2 - Activate and install packages
+source /scratch/yourUsername/my_env/bin/activate
+pip install numpy
+python -c "import numpy; print(numpy.__version__)"
+deactivate
+
+# Confirm deactivation
+python -c "import numpy"
+
+# Step 3 - Write a Python script
+cd /scratch/yourUsername/hpc-tutorial
+nano test_script.py
+
+# --- test_script.py ---
+import numpy as np
+
+print("Python is working on the cluster!")
+arr = np.array([1, 2, 3, 4, 5])
+print(f"Array: {arr}")
+print(f"Mean: {np.mean(arr)}")
+print(f"numpy version: {np.__version__}")
+# --- end test_script.py ---
+
+# Step 4 - Write the job script
+nano python-job.sh
+
+# --- python-job.sh ---
+#!/bin/bash
+#SBATCH -J python_test
+#SBATCH --time=00:05:00
+#SBATCH --mem=1G
+#SBATCH --ntasks=1
+#SBATCH --account=def-kanj241_cpu
+
+module load python/3.11.5
+source /scratch/yourUsername/my_env/bin/activate
+python /scratch/yourUsername/hpc-tutorial/test_script.py
+echo "Job done!"
+# --- end python-job.sh ---
+
+# Step 5 - Submit and check output
+sbatch python-job.sh
+squeue -u yourUsername
+cat slurm-30508122.out
+
+
+----------------------------------------------------------------
+SECTION 4 --- TRANSFERRING FILES WITH SCP
+----------------------------------------------------------------
+
+# Upload a single file (run in Windows PowerShell)
+scp "C:\Users\yourWindowsUsername\script.py" yourUsername@fir.alliancecan.ca:/scratch/yourUsername/
+
+# Upload a whole folder
+scp -r "C:\Users\yourWindowsUsername\my_folder" yourUsername@fir.alliancecan.ca:/scratch/yourUsername/
+
+# Download a single file
+scp yourUsername@fir.alliancecan.ca:/scratch/yourUsername/results.txt "C:\Users\yourWindowsUsername\"
+
+# Download a whole folder
+scp -r yourUsername@fir.alliancecan.ca:/scratch/yourUsername/results/ "C:\Users\yourWindowsUsername\"
+
+# Check for Windows line endings
+cat -A example-job.sh
+
+# Expected output:
+# #!/bin/bash^M$
+# #SBATCH -J my_test_job^M$
+# #SBATCH --time=00:05:00^M$      <- ^M means Windows line ending
+
+# Fix Windows line endings
+dos2unix example-job.sh
+
+# Verify clean:
+cat -A example-job.sh
+# Expected output:
+# #!/bin/bash$
+# #SBATCH -J my_test_job$
+# #SBATCH --time=00:05:00$        <- clean!
+
+# Bundle a folder before transfer --- Windows PowerShell
+# (cd to the PARENT of the folder you want to bundle first)
+cd C:\Users\yourWindowsUsername\Downloads
+tar -czvf results.tar.gz results
+scp results.tar.gz yourUsername@fir.alliancecan.ca:/scratch/yourUsername/
+
+# Bundle a folder before transfer --- on the cluster
+cd /scratch/yourUsername/hpc-tutorial
+tar -czvf results.tar.gz results/
+
+# Unpack on Windows PowerShell
+tar -xzvf results.tar.gz
+
+# Unpack on the cluster
+tar -xzvf results.tar.gz
+
+# rsync (large or frequent transfers)
+rsync -rvzP local/folder/ yourUsername@fir.alliancecan.ca:/scratch/yourUsername/
+
+
+----------------------------------------------------------------
+SECTION 5 --- RUNNING GPU JOBS
+----------------------------------------------------------------
+
+# Step 1 - Find available GPUs
+sinfo -o "%P %G" | grep gpu
+
+# Filter to a specific partition
+sinfo -o "%P %G" | grep gpu | grep gpubase_bygpu_b1
+
+# How to read the output:
+# sinfo shows:   gpu:nvidia_h100_80gb_hbm3_1g.10gb:8   <- 8 available on node
+# You request:   --gres=gpu:nvidia_h100_80gb_hbm3_1g.10gb:1  <- you want 1
+
+# Step 2 - CPU vs GPU accounts (no command needed - fixed for your lab)
+# CPU jobs: --account=def-kanj241_cpu
+# GPU jobs: --account=def-kanj241_gpu
+
+# Step 3 - Install PyTorch
+module load python/3.11.5
+source /scratch/yourUsername/my_env/bin/activate
+pip install torch torchvision
+deactivate
+
+# Check available CUDA versions
+module avail cuda
+
+# Navigate to working directory
+cd /scratch/yourUsername/hpc-tutorial
+nano cifar10_train.py
+
+# --- cifar10_train.py ---
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
+
+# Check GPU availability --- always print this first!
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# Download and load CIFAR-10 (downloads automatically on first run)
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
+
+trainset = torchvision.datasets.CIFAR10(
+    root='./data', train=True, download=True, transform=transform)
+trainloader = torch.utils.data.DataLoader(
+    trainset, batch_size=64, shuffle=True, num_workers=2)
+
+testset = torchvision.datasets.CIFAR10(
+    root='./data', train=False, download=True, transform=transform)
+testloader = torch.utils.data.DataLoader(
+    testset, batch_size=64, shuffle=False, num_workers=2)
+
+# Define a simple CNN
+class SimpleCNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 32, 3, padding=1)
+        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.pool  = nn.MaxPool2d(2, 2)
+        self.fc1   = nn.Linear(64 * 8 * 8, 512)
+        self.fc2   = nn.Linear(512, 10)
+        self.relu  = nn.ReLU()
+
+    def forward(self, x):
+        x = self.pool(self.relu(self.conv1(x)))
+        x = self.pool(self.relu(self.conv2(x)))
+        x = x.view(-1, 64 * 8 * 8)
+        x = self.relu(self.fc1(x))
+        return self.fc2(x)
+
+model     = SimpleCNN().to(device)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Training loop
+epochs = 5
+for epoch in range(epochs):
+    running_loss = 0.0
+    for inputs, labels in trainloader:
+        inputs, labels = inputs.to(device), labels.to(device)
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+        loss.backward()
+        optimizer.step()
+        running_loss += loss.item()
+
+    # Evaluate on test set
+    correct, total = 0, 0
+    with torch.no_grad():
+        for inputs, labels in testloader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            _, predicted = torch.max(model(inputs), 1)
+            total   += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    print(f"Epoch {epoch+1}/{epochs} | "
+          f"Loss: {running_loss/len(trainloader):.3f} | "
+          f"Accuracy: {100*correct/total:.1f}%")
+
+print("Training complete!")
+torch.save(model.state_dict(), "cifar10_model.pth")
+print("Model saved to cifar10_model.pth")
+# --- end cifar10_train.py ---
+
+nano gpu-job.sh
+
+# --- gpu-job.sh ---
+#!/bin/bash
+#SBATCH -J cifar10_training
+#SBATCH --time=00:30:00
+#SBATCH --mem=8G
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:nvidia_h100_80gb_hbm3_1g.10gb:1
+#SBATCH --partition=gpubase_bygpu_b1
+#SBATCH --account=def-kanj241_gpu
+
+module load python/3.11.5
+module load cuda
+source /scratch/yourUsername/my_env/bin/activate
+python /scratch/yourUsername/hpc-tutorial/cifar10_train.py
+echo "Job done!"
+# --- end gpu-job.sh ---
+
+# Step 4 - Confirm the GPU is being used (add to top of Python script)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# Submit and check output
+sbatch gpu-job.sh
+squeue -u yourUsername
+cat slurm-JOBID.out
+
+================================================================
+END OF COMMANDS
+================================================================
