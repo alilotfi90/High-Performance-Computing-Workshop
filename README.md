@@ -6,6 +6,12 @@ Department of Plant Sciences, University of Saskatchewan
 
 ---
 
+<p align="center">
+  <img src="universalAI.png" alt="AI and HPC for Agricultural Research" width="80%"/>
+</p>
+
+---
+
 ## Overview
 
 This repository contains hands-on tutorial materials for the **Fir HPC cluster** (Digital Research Alliance of Canada). The tutorial covers everything a lab member needs to go from first SSH login to running deep learning models on NVIDIA H100 GPUs.
@@ -25,11 +31,17 @@ Every command in these materials was tested live on Fir.
 
 ## What You Will Learn
 
-1. **Submitting Jobs with SLURM** — job scripts, monitoring, time limits, resource tuning
-2. **Loading Software with Modules** — `module load`, version pinning, reproducibility
-3. **Transferring Files** — `scp`, `dos2unix`, `tar`, `rsync` from Windows
-4. **Running Python on the Cluster** — virtual environments, pip, batch Python jobs
-5. **Running GPU Jobs** — finding GPUs with `sinfo`, requesting H100 slices, training a CNN
+1. **What Is an HPC Cluster?** — nodes, login vs compute, why HPC matters for imaging research
+2. **Logging In via SSH** — connecting from Windows, Duo authentication, reading the prompt
+3. **Finding Your Way Around** — `pwd`, `ls`, `cd`, absolute vs relative paths, filesystem layout
+4. **Creating, Moving, and Deleting Files** — `nano`, `mv`, `cp`, `rm`, chaining commands
+5. **Wildcards, Redirection, and Pipes** — `*`, `>`, `|`, `grep`, compression with `tar` and `gzip`
+6. **Shell Scripts, Variables, and Loops** — writing `.sh` scripts, variables, for loops, `chmod`
+7. **Submitting Jobs with SLURM** — job scripts, monitoring, time limits, resource tuning
+8. **Loading Software with Modules** — `module load`, version pinning, reproducibility
+9. **Running Python on the Cluster** — virtual environments, pip, batch Python jobs
+10. **Transferring Files** — `scp`, `dos2unix`, `tar`, `rsync` from Windows
+11. **Running GPU Jobs** — finding GPUs with `sinfo`, requesting H100 slices, training a CNN
 
 ---
 
