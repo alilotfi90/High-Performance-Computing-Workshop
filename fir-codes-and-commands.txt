@@ -14,26 +14,307 @@ Replace placeholders before typing:
 BEFORE YOU BEGIN
 ----------------------------------------------------------------
 
-# SSH into the cluster (run in Windows PowerShell or Command Prompt)
+# SSH into the cluster and create working directory
 ssh yourUsername@fir.alliancecan.ca
-
-# Create working directory
 cd ~/scratch
 mkdir hpc-tutorial
 cd hpc-tutorial
 pwd
-
-# Check the scratch symlink
-ls -la ~/ | grep scratch
+/scratch/yourUsername/hpc-tutorial
 
 
 ----------------------------------------------------------------
-SECTION 1 --- SUBMITTING JOBS WITH SLURM
+SECTION 1 --- WHAT IS AN HPC CLUSTER?
+----------------------------------------------------------------
+
+# No commands to run in this section --- diagrams only
+
+
+----------------------------------------------------------------
+SECTION 2 --- LOGGING IN VIA SSH
+----------------------------------------------------------------
+
+# Connect to Fir (run in Windows Command Prompt)
+ssh yourUsername@fir.alliancecan.ca
+
+# At the Duo prompt, type 1 and press Enter, then approve on your phone
+
+# Which node are you on?
+hostname
+login1
+
+
+----------------------------------------------------------------
+SECTION 3 --- FINDING YOUR WAY AROUND
+----------------------------------------------------------------
+
+# Where am I?
+pwd
+/home/yourUsername
+
+# Who am I?
+whoami
+yourUsername
+
+# What is here?
+ls
+nearline  projects  scratch
+
+# Check the scratch symlink
+ls -l
+lrwxrwxrwx 1 root root 14 Feb 10 scratch -> /scratch/yourUsername
+
+# Useful ls flags
+ls -l      # long listing: permissions, owner, size, date
+ls -lh     # same, but file sizes are human-readable (4.0K vs 4096)
+ls -a      # show ALL files, including hidden ones (starting with .)
+ls -la     # combine -l and -a
+ls -r      # list in reverse order
+ls -t      # list sorted by last modified time (newest first)
+ls -R      # list recursively (all subdirectories)
+
+# Moving between folders
+cd projects/       # enter the projects folder
+cd ..              # go up one level (parent directory)
+cd ~               # go back to your home directory
+cd                 # also goes home (same as cd ~)
+cd /               # go to the root of the entire filesystem
+cd /scratch/yourUsername  # go anywhere using a full absolute path
+
+# Wrong vs correct cd
+cd..          # ERROR: cd..: command not found
+cd ..         # CORRECT
+
+# Getting help
+man ls            # opens the full manual (press q to quit)
+ls --help         # prints a quick summary
+
+# Typo example - shell gives clear error
+cd,,
+-bash: cd: ,,: No such file or directory
+
+# Explore the root filesystem
+cd /
+ls
+afs  boot  cvmfs  home  project  scratch  nearline  ...
+
+# Which node are you on?
+hostname
+login1
+
+
+----------------------------------------------------------------
+SECTION 4 --- CREATING, MOVING, AND DELETING FILES
+----------------------------------------------------------------
+
+# Create a folder
+mkdir hpc-test
+ls
+hpc-test  nearline  projects  scratch
+
+# Edit a file with nano
+nano draft.txt
+# Ctrl+O to save, Ctrl+X to exit, Ctrl+K to cut line, Ctrl+U to paste
+
+# Reading files
+cat draft.txt          # print the whole file to screen
+cat file1 file2        # print multiple files in sequence (concatenate)
+head draft.txt         # print the first 10 lines
+head -n 20 draft.txt   # print the first 20 lines
+tail draft.txt         # print the last 10 lines
+less draft.txt         # scroll through the file (q to quit)
+
+# Common cat mistake
+cat file1.txt cat file2.txt   # WRONG: tries to open a file called "cat"
+cat file1.txt file2.txt       # CORRECT: prints both files in sequence
+
+# Moving and renaming
+mv draft.txt paper/       # move INTO the paper folder
+mv draft.txt final.txt    # rename draft.txt to final.txt
+
+# mv trailing slash warning
+mv draft.txt paper    # WRONG: renames draft.txt to a file called "paper"!
+mv draft.txt paper/   # CORRECT: moves INTO the folder
+
+# Safe move pattern
+mkdir paper && mv draft.txt paper/
+
+# Downloading files from the internet
+wget https://example.com/file.tar.gz    # download a single file
+curl -O https://example.com/file.tar.gz # alternative downloader
+git clone https://github.com/user/repo  # clone a Git repository
+
+# wget vs git clone
+wget https://github.com/username/my-repo.git   # WRONG: downloads HTML page
+git clone https://github.com/username/my-repo.git  # CORRECT
+
+# Copying
+cp final.txt backup.txt      # copy to same folder with new name
+cp final.txt paper/          # copy into another folder
+cp -r myfolder/ destination/ # copy an entire folder (-r = recursive)
+
+# Deleting
+rm filename          # delete a file
+rm -i filename       # delete with a confirmation prompt
+rm -r foldername     # delete a folder and everything inside it
+rm -rf foldername    # force delete (needed for Git repos)
+rm -f filename       # force delete single file, no confirmation
+rmdir foldername     # delete an empty folder only
+
+# Chaining commands
+cmd1 && cmd2    # run cmd2 ONLY if cmd1 succeeded
+cmd1 ; cmd2     # run cmd2 regardless of whether cmd1 worked
+
+# Examples of chaining
+mkdir paper && mv draft.txt paper/
+cd paper && rm final.txt
+
+
+----------------------------------------------------------------
+SECTION 5 --- WILDCARDS, REDIRECTION, AND PIPES
+----------------------------------------------------------------
+
+# Download demo files
+cd ~/scratch/hpc-tutorial
+wget https://cbe453.github.io/arc-plato-intro/files/bash-lesson.tar.gz
+tar -xzvf bash-lesson.tar.gz
+ls *.fastq | head -5
+SRR307023_1.fastq
+SRR307023_2.fastq
+SRR307024_1.fastq
+SRR307024_2.fastq
+SRR307025_1.fastq
+
+# Wildcards
+ls *.txt            # matches all .txt files
+wc -l *.fastq       # count lines in all .fastq files at once
+mkdir fastq && mv *.fastq fastq/   # create folder, then move all .fastq files
+wc -l *             # match every file in the current directory
+
+# No match example
+ls *.fq
+*.fq    # ERROR: bash treats it as a filename, not a pattern
+
+# echo
+echo "Hello Fir!"             # print text to screen
+echo -e "line1\nline2"        # \n = newline (needs -e flag)
+
+# Output redirection
+wc -l *.txt > counts.txt      # write output to file (OVERWRITES!)
+wc -l *.txt >> counts.txt     # append to file (preserves old content)
+wc -l * &> counts.txt         # redirect both output AND errors
+wc -l * 2> errors.txt         # redirect only errors
+
+# grep
+grep "Fir" text1.txt          # find all lines containing "Fir"
+grep "Fir" *.txt              # search across all .txt files
+grep "Act5C" genome.gtf | wc -l   # count matching lines
+
+# Pipes
+grep "Fir" text1.txt | wc -l      # count lines matching "Fir"
+cat output.txt | head -n 5        # show first 5 lines of output
+wc -l *.fastq | sort              # count lines, then sort
+
+# Compressing and archiving
+gzip file.txt             # compress a file -> file.txt.gz (original deleted!)
+gunzip file.txt.gz        # decompress back to file.txt
+zcat file.txt.gz          # read compressed file without extracting
+unzip file.zip            # extract a .zip archive
+tar -czvf archive.tar.gz folder/   # compress a whole folder
+tar -xzvf archive.tar.gz           # extract
+
+# Wrong vs correct with compressed files
+wc -l file.txt.gz          # WRONG: counts binary bytes, meaningless
+zcat file.txt.gz | wc -l   # CORRECT: decompress then count
+
+
+----------------------------------------------------------------
+SECTION 6 --- SHELL SCRIPTS, VARIABLES, AND LOOPS
+----------------------------------------------------------------
+
+# Create your first script
+nano demo.sh
+
+# --- demo.sh (first version) ---
+#!/bin/bash
+
+# This is a comment - it won't run
+echo "Our script worked!"
+# --- end demo.sh ---
+
+# Running a script
+sh demo.sh          # works - passes script to sh directly
+bash demo.sh        # same, using bash explicitly
+./demo.sh           # fails without execute permission
+chmod +x demo.sh    # add execute permission
+./demo.sh           # now works
+
+# File permissions
+chmod +x script.sh    # add execute for all users
+chmod 600 file        # only owner can read/write; no one else
+chmod 777 file        # everyone can read/write/execute
+touch newfile.txt     # create an empty file
+
+# Variables
+VAR="Hello from Fir"    # set a variable (no spaces around =)
+echo $VAR               # use a variable (always with $)
+FILES=$(ls)             # store command output in a variable
+echo $FILES
+
+# Wrong vs correct variable usage
+wc -l FILE     # WRONG: treats FILE as a literal filename
+wc -l $FILE    # CORRECT: uses the value stored in FILE
+
+# Wrong way to capture command output
+TEST = ls -l    # WRONG: bash tries to run "ls" as a command
+FILES=$(ls)     # CORRECT: wrap command in $()
+
+# Script arguments ($1, $2, etc.)
+# --- demo.sh (arguments version) ---
+#!/bin/bash
+wc -l $1    # $1 = first argument passed to the script
+# --- end ---
+
+./demo.sh gene_association.fb
+106290 gene_association.fb
+
+# Variable concatenation
+FILE=gene_association.fb
+echo ${FILE}.counts           # preview: gene_association.fb.counts
+wc -l $FILE > ${FILE}.counts  # actually create it
+
+# For loop
+# --- demo.sh (loop version) ---
+#!/bin/bash
+
+for FILE in fastq/*.fastq
+do
+    echo "Processing $FILE"
+    wc -l $FILE > ${FILE}.counts
+done
+# --- end ---
+
+# Update demo.sh to loop over all arguments
+nano demo.sh
+
+# --- demo.sh (final version) ---
+#!/bin/bash
+for FILE in $@
+do
+    wc -l $FILE
+done
+# --- end ---
+
+# Run on all .fastq files at once
+./demo.sh fastq/*.fastq
+
+
+----------------------------------------------------------------
+SECTION 7 --- SUBMITTING JOBS WITH SLURM
 ----------------------------------------------------------------
 
 # Navigate to working directory
 cd /scratch/yourUsername/hpc-tutorial
-
 nano example-job.sh
 
 # --- example-job.sh ---
@@ -114,7 +395,7 @@ sacct -j 30508122
 
 
 ----------------------------------------------------------------
-SECTION 2 --- LOADING SOFTWARE WITH MODULES
+SECTION 8 --- LOADING SOFTWARE WITH MODULES
 ----------------------------------------------------------------
 
 module avail
@@ -131,7 +412,7 @@ which python
 
 
 ----------------------------------------------------------------
-SECTION 3 --- RUNNING PYTHON ON THE CLUSTER
+SECTION 9 --- RUNNING PYTHON ON THE CLUSTER
 ----------------------------------------------------------------
 
 # Step 1 - Create the virtual environment
@@ -189,7 +470,7 @@ cat slurm-30508122.out
 
 
 ----------------------------------------------------------------
-SECTION 4 --- TRANSFERRING FILES WITH SCP
+SECTION 10 --- TRANSFERRING FILES WITH SCP
 ----------------------------------------------------------------
 
 # Upload a single file (run in Windows PowerShell)
@@ -243,7 +524,7 @@ rsync -rvzP local/folder/ yourUsername@fir.alliancecan.ca:/scratch/yourUsername/
 
 
 ----------------------------------------------------------------
-SECTION 5 --- RUNNING GPU JOBS
+SECTION 11 --- RUNNING GPU JOBS
 ----------------------------------------------------------------
 
 # Step 1 - Find available GPUs
